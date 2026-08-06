@@ -43,7 +43,7 @@ beea024c8f4754be1f63ee2bf9506923  ./patch_mse.sh
 e5845a502500d245480ffeec84b117eb  ./patch_mse2.sh
 f04d2bb5a5ebed2f4e6c9ab053094ca0  ./autom4te.cache/requests
 cc38e0bb3e6b296adf6fe4e3634ad2b2  ./autom4te.cache/output.0
-2c4c24f00e1af23903abde7bf33935aa  ./autom4te.cache/traces.0
+0125b5d38bfffe2b63c3c34578443725  ./autom4te.cache/traces.0
 cc38e0bb3e6b296adf6fe4e3634ad2b2  ./autom4te.cache/output.1
 315529c74d75fda8192f65b4f8da3642  ./autom4te.cache/traces.2
 315529c74d75fda8192f65b4f8da3642  ./autom4te.cache/traces.1
@@ -52,7 +52,7 @@ e6bb6a07e06b4e3f2a612735c25396d8  ./patch_keys.sh
 cf258f914ddb13bb4cfa8a5d60f951b5  ./config.sub
 0e4ce43b6bb2bb2805ab13e9f3295072  ./depcomp
 4120aef2a6a424acd37a7ad3dce453f0  ./.editorconfig
-e98dbf48255d1875ead5bd5b93827abb  ./Makefile.in
+b7837d5ebb7c1698fd9d6a5698d735b7  ./Makefile.in
 5c17d17a456276579f868b374aed5c40  ./win32/bannrbmp.bmp
 256d8c93ab308637a722fa12124a5eab  ./win32/Make.rules.mak
 058b00cfd74f00b3739898786b8ebe1a  ./win32/versioninfo-customactions.rc
@@ -203,7 +203,7 @@ eac722c61aede26c6ba7628636a10278  ./src/libopensc/card-masktech.c
 f0ae0aba7a4cb186f0659878dfa0d157  ./src/libopensc/opensc.exports
 67636451abc8f3fc60fb12fcfb604c46  ./src/libopensc/card-isoApplet.c
 f6b34f41c509137d03dcaa3b8d334431  ./src/libopensc/card-epass2003.c
-4d79104d1ba0b22839088ca372afa31a  ./src/libopensc/card-starsign.c
+7ccf7358ed15d92067fc1d0fef548db2  ./src/libopensc/card-starsign.c
 9ca21c758498bcad8eb0869349a74f6d  ./src/libopensc/cwa14890.c
 5b8feb30b31a7057f300027ba6ac2c3a  ./src/libopensc/pkcs15-cac.c
 8a1902eb22b7061f61c9d12e4c33f964  ./src/libopensc/pkcs15-emulator-filter.h
@@ -463,10 +463,10 @@ d1260a31622173eaf3b69d32fac95873  ./src/pkcs11/debug.c
 a5f6cf2fa525b07ff9b0d4e5a9113c30  ./src/pkcs11/pkcs11.h
 1e686c3bc848f16fb4b86aa2f6fe867e  ./src/pkcs11/Makefile.am
 1085941fd01e0e29d9866181f584d0b9  ./src/pkcs11/pkcs11.exports
-0927cf8a9446a75dc9ee33cc4e106f2f  ./src/pkcs11/framework-pkcs15.c
-c045b30028b8a29cd0f3fd21566b5f5b  ./src/pkcs11/openssl.c
+a91af5d5b75ca6adea0a879849f4d1ce  ./src/pkcs11/framework-pkcs15.c
+3a1513e2fbdedb8fe00d6bd8bebb05ad  ./src/pkcs11/openssl.c
 3191ea3ea5f173222218b449001209b6  ./src/pkcs11/Makefile.mak
-6ecae7739c497b2e35cd1dcb172cbb8c  ./src/pkcs11/pkcs11-object.c
+2511d13166d7df28e4a6016f38740b6a  ./src/pkcs11/pkcs11-object.c
 34c0c906885ce68e405c08228270acbd  ./src/Makefile.am
 0a41e9cb894870606d07809c51f3d94e  ./src/common/compat_strnlen.h
 686621a5604f7e5051664814815dbc61  ./src/common/ChangeLog.compat_getopt
@@ -594,7 +594,7 @@ fe1c9e4c7175c27d0b3bf288473c95aa  ./src/tests/unittests/compression.c
 397b97093d4127a779e2ff65f2e1ed65  ./src/tests/unittests/strip_pkcs1_2_padding.c
 101ab14ab22facca19dceeade7c3d318  ./src/tests/unittests/decode_ecdsa_signature.c
 bd8980f09732b3d1ecf3d2150127708c  ./src/tests/unittests/simpletlv.c
-65044c64263d72d9dad743912510352e  ./src/tests/unittests/Makefile.in
+c6c381c2621786c2a7f080b543688037  ./src/tests/unittests/Makefile.in
 ec583c5f3920fee1454d3db681c8340d  ./src/tests/unittests/torture.h
 37e43a17e334254dcefbc564b9f62ee5  ./src/tests/unittests/hextobin.c
 1b14e2bfc3f8f246912534c9cbb5b4d1  ./src/tests/unittests/sm.c
@@ -712,7 +712,7 @@ b4e48be493ffb98cdcc00f14f68a26e0  ./m4/ax_check_gnu_make.m4
 4c5508b8d043a95d3bc1536716c18ae4  ./m4/lt~obsolete.m4
 71ff2adc5f257348787b6f06040cdd01  ./install-sh
 da81d591acc8659a402071bb7dcd3615  ./test_mse2.py
-2a3361353f2351c8aef897ad82539fdf  ./aminclude_static.am
+b85c3b8ef31f00549530b95fbbb29791  ./aminclude_static.am
 9f9fb0a8e9c4f0b324dbaab3663ee8d2  ./test_pkcs11_sign.sh
 8fb3aaeaa10def6ec00fdb5d935cb21c  ./configure.ac
 c3a5fcb3203295bcc77739d9c56d6df2  ./compile

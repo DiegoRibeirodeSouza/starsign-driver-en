@@ -1,4 +1,18 @@
-opensc (0.26.1-2+open.a3.2) unstable; urgency=medium
+opensc (0.26.1-2+open.a3.6) unstable; urgency=medium
+
+  * Handle EOF correctly by catching 6700 length errors in custom read_binary
+
+ -- Diego Ribeiro <diego@localhost>  Thu, 06 Aug 2026 13:28:00 -0300
+
+
+opensc (0.26.1-2+open.a3.5) unstable; urgency=medium
+
+  * Fix selection bug and implement PR review feedback
+
+ -- Diego Ribeiro <diego@localhost>  Thu, 06 Aug 2026 10:04:00 -0300
+
+
+opensc (0.26.1-2+open.a3.4) unstable; urgency=medium
 
   * Custom build for Brazilian A3 tokens (Open-A3-Driver)
 

@@ -194,7 +194,7 @@ eac722c61aede26c6ba7628636a10278  ./src/libopensc/card-masktech.c
 f0ae0aba7a4cb186f0659878dfa0d157  ./src/libopensc/opensc.exports
 67636451abc8f3fc60fb12fcfb604c46  ./src/libopensc/card-isoApplet.c
 f6b34f41c509137d03dcaa3b8d334431  ./src/libopensc/card-epass2003.c
-4d79104d1ba0b22839088ca372afa31a  ./src/libopensc/card-starsign.c
+7ccf7358ed15d92067fc1d0fef548db2  ./src/libopensc/card-starsign.c
 9ca21c758498bcad8eb0869349a74f6d  ./src/libopensc/cwa14890.c
 5b8feb30b31a7057f300027ba6ac2c3a  ./src/libopensc/pkcs15-cac.c
 8a1902eb22b7061f61c9d12e4c33f964  ./src/libopensc/pkcs15-emulator-filter.h
@@ -454,10 +454,10 @@ d1260a31622173eaf3b69d32fac95873  ./src/pkcs11/debug.c
 a5f6cf2fa525b07ff9b0d4e5a9113c30  ./src/pkcs11/pkcs11.h
 1e686c3bc848f16fb4b86aa2f6fe867e  ./src/pkcs11/Makefile.am
 1085941fd01e0e29d9866181f584d0b9  ./src/pkcs11/pkcs11.exports
-0927cf8a9446a75dc9ee33cc4e106f2f  ./src/pkcs11/framework-pkcs15.c
-c045b30028b8a29cd0f3fd21566b5f5b  ./src/pkcs11/openssl.c
+a91af5d5b75ca6adea0a879849f4d1ce  ./src/pkcs11/framework-pkcs15.c
+3a1513e2fbdedb8fe00d6bd8bebb05ad  ./src/pkcs11/openssl.c
 3191ea3ea5f173222218b449001209b6  ./src/pkcs11/Makefile.mak
-6ecae7739c497b2e35cd1dcb172cbb8c  ./src/pkcs11/pkcs11-object.c
+2511d13166d7df28e4a6016f38740b6a  ./src/pkcs11/pkcs11-object.c
 34c0c906885ce68e405c08228270acbd  ./src/Makefile.am
 0a41e9cb894870606d07809c51f3d94e  ./src/common/compat_strnlen.h
 686621a5604f7e5051664814815dbc61  ./src/common/ChangeLog.compat_getopt
