@@ -1,5 +1,5 @@
-# Análise APDU — StarSign CUT S (SafeSign 4.7)
-# Captura de referência: pcscd --apdu, operação: --list-objects --login
+# APDU Analysis — StarSign CUT S (SafeSign 4.7)
+# Reference capture: pcscd --apdu, operação: --list-objects --login
 
 ---
 
@@ -12,7 +12,7 @@ O arquivo `pcscd_apdu_log.txt` contém o PIN do token em texto claro.
 
 ## Sequência completa de operações (443 APDUs, 886 linhas)
 
-### Fase 0 — Autenticação do software ("handshake DRM")
+### Phase 0 — Software Authentication ("handshake DRM")
 
 Este é o mecanismo pelo qual o driver prova ao cartão que é software autorizado.
 
@@ -31,13 +31,13 @@ C→T  00 DA 01 00 3C
 T→C  90 00  ✅ autenticação bem-sucedida
 ```
 
-**Conclusão crítica:** Não há criptografia assimétrica no handshake.
+**Critical conclusion:** Não há criptografia assimétrica no handshake.
 O cartão aceita qualquer software que envie esse string literal exato via PUT DATA (INS=DA, P1=01, P2=00).
 Nosso driver open source PODE implementar esse handshake diretamente.
 
 ---
 
-### Fase 1 — Identificação do token
+### Phase 1 — Token Identification
 
 ```
 C→T  00 A4 00 0C 02 50 31        SELECT DF 5031 (tentativa)
@@ -66,7 +66,7 @@ T→C  6D 00  (not supported)
 
 ---
 
-### Fase 2 — Abertura de canal lógico
+### Phase 2 — Opening logical channel
 
 ```
 C→T  00 A4 00 0C 02 3F 00        SELECT MF
@@ -80,7 +80,7 @@ T→C  01 90 00                     ← canal 1 alocado
 
 ---
 
-### Fase 3 — Inicialização PKCS#15 no canal 1
+### Phase 3 — Initialization PKCS#15 no canal 1
 
 ```
 C→T  01 A4 04 00 0C A0 00 00 00 63 50 4B 43 53 2D 31 35 00
@@ -109,7 +109,7 @@ T→C  [TokenInfo TLV — 117 bytes contendo serial, manufacturer, etc.] 90 00
 
 ---
 
-### Fase 4 — Polling proprietário
+### Phase 4 — Proprietary polling
 
 Repetido constantemente entre operações:
 
@@ -128,7 +128,7 @@ Aparece com delay de ~4s (valor `04399702` no timestamp = 4.4s). O SafeSign faz 
 
 ---
 
-### Fase 5 — Leitura dos objetos de dados (Data Objects)
+### Phase 5 — Reading data objects (Data Objects)
 
 #### EF 44 07 — Diretório de objetos de dados (DODF)
 ```
@@ -180,7 +180,7 @@ São objetos SHA-256 de uso privado (possivelmente hashes de documentos assinado
 
 ---
 
-### Fase 6 — Objetos PKCS#15 (após VERIFY PIN)
+### Phase 6 — Objetos PKCS#15 (após VERIFY PIN)
 
 #### VERIFY PIN
 ```

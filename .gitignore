@@ -1,5 +1,4 @@
 *.deb
 *.buildinfo
 *.changes
-research/
 run_pje_headless.sh
