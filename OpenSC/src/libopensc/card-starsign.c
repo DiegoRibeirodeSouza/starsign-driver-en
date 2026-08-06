@@ -55,6 +55,7 @@ static int starsign_init(sc_card_t *card)
 	apdu.datalen = sizeof(starsign_drm_string) - 1;
 	apdu.lc = apdu.datalen;
 	r = sc_transmit_apdu(card, &apdu);
+	if (r < 0) return r;
 
 	/* 2. Select PKCS#15 AID (ignore result) */
 	u8 aid[] = { 0xA0, 0x00, 0x00, 0x00, 0x63, 0x50, 0x4B, 0x43, 0x53, 0x2D, 0x31, 0x35 };
@@ -73,6 +74,7 @@ static int starsign_init(sc_card_t *card)
 	apdu.datalen = sizeof(starsign_drm_string) - 1;
 	apdu.lc = apdu.datalen;
 	r = sc_transmit_apdu(card, &apdu);
+	if (r < 0) return r;
 
 	/* 4. Open Logical Channel 1 */
 	sc_format_apdu(card, &apdu, SC_APDU_CASE_2_SHORT, 0x70, 0x00, 0x00);
@@ -101,17 +103,15 @@ static int starsign_init(sc_card_t *card)
 	r = sc_transmit_apdu(card, &apdu);
 	LOG_TEST_RET(card->ctx, r, "Failed to select AID on channel 1");
 	r = sc_check_sw(card, apdu.sw1, apdu.sw2);
-	if (r < 0) {
-		sc_log(card->ctx, "Card refused AID selection on channel 1 (SW %02X %02X), ignoring as it might be already selected", apdu.sw1, apdu.sw2);
-	}
+	LOG_TEST_RET(card->ctx, r, "Card refused AID selection on channel 1");
 
-	/* Force RAW RSA (software padding) because G&D StarSign CUT cards 
-           often return 67 00 if sent unpadded hashes during C_Sign.
-           We only set SC_ALGORITHM_RSA_RAW so OpenSC pads the data to 256 bytes itself. */
-        card->caps |= SC_CARD_CAP_APDU_EXT;
-        card->max_send_size = 2048;
-        card->max_recv_size = 2048;
-        unsigned long alg_flags = SC_ALGORITHM_RSA_RAW | SC_ALGORITHM_RSA_PAD_PKCS1 | SC_ALGORITHM_RSA_HASH_NONE | SC_ALGORITHM_RSA_HASH_MD5 | SC_ALGORITHM_RSA_HASH_SHA1 | SC_ALGORITHM_RSA_HASH_SHA256;
+	/* The G&D StarSign CUT S strictly expects a full modulus-sized payload (e.g. 256 bytes)
+	 * during C_Sign. Sending an unpadded hash returns 67 00 (Wrong Length) deterministically.
+	 * We force SC_ALGORITHM_RSA_RAW to let OpenSC handle the PKCS#1 v1.5 padding in software. */
+	card->caps |= SC_CARD_CAP_APDU_EXT;
+	card->max_send_size = 2048;
+	card->max_recv_size = 2048;
+	unsigned long alg_flags = SC_ALGORITHM_RSA_RAW | SC_ALGORITHM_RSA_PAD_PKCS1 | SC_ALGORITHM_RSA_HASH_NONE | SC_ALGORITHM_RSA_HASH_MD5 | SC_ALGORITHM_RSA_HASH_SHA1 | SC_ALGORITHM_RSA_HASH_SHA256;
 				  
 	_sc_card_add_rsa_alg(card, 1024, alg_flags, 0);
 	_sc_card_add_rsa_alg(card, 2048, alg_flags, 0);
@@ -144,10 +144,10 @@ static int starsign_select_file(sc_card_t *card, const sc_path_t *in_path, sc_fi
 		apdu.datalen = in_path->len;
 		apdu.lc = in_path->len;
 		r = sc_transmit_apdu(card, &apdu);
-		if (r == 0) r = sc_check_sw(card, apdu.sw1, apdu.sw2);
-		if (r == 0) {
+		if (r == SC_SUCCESS) r = sc_check_sw(card, apdu.sw1, apdu.sw2);
+		if (r == SC_SUCCESS) {
 			sc_log(card->ctx, "STARSIGN SELECT FILE: Full path selection successful");
-			return 0;
+			return SC_SUCCESS;
 		}
 		sc_log(card->ctx, "STARSIGN SELECT FILE: Full path selection failed (%d), falling back to component-by-component", r);
 	}
@@ -169,12 +169,14 @@ static int starsign_select_file(sc_card_t *card, const sc_path_t *in_path, sc_fi
 			sc_format_apdu(card, &apdu, SC_APDU_CASE_3_SHORT, 0xA4, 0x00, 0x0C);
 			apdu.data = (const u8 *)"\x3F\x00";
 			apdu.datalen = 2; apdu.lc = 2;
-			sc_transmit_apdu(card, &apdu);
+			r = sc_transmit_apdu(card, &apdu);
+			if (r < 0) return r;
 			
 			sc_format_apdu(card, &apdu, SC_APDU_CASE_3_SHORT, 0xA4, 0x00, 0x0C);
 			apdu.data = (const u8 *)"\x50\x15";
 			apdu.datalen = 2; apdu.lc = 2;
-			sc_transmit_apdu(card, &apdu);
+			r = sc_transmit_apdu(card, &apdu);
+			if (r < 0) return r;
 			continue;
 		}
 		/* Ignore virtual/intermediate DFs that are not selectable directly on G&D StarSign */
@@ -183,7 +185,8 @@ static int starsign_select_file(sc_card_t *card, const sc_path_t *in_path, sc_fi
 			continue;
 		}
 
-		sc_format_apdu(card, &apdu, SC_APDU_CASE_3_SHORT, 0xA4, 0x00, 0x0C); /* P2=0x0C means No response/FCI expected */
+		int p1 = (i + 2 < in_path->len) ? 0x01 : 0x02; /* 0x01 for DF, 0x02 for EF */
+		sc_format_apdu(card, &apdu, SC_APDU_CASE_3_SHORT, 0xA4, p1, 0x0C); /* P2=0x0C means No response/FCI expected */
 		apdu.data = &in_path->value[i];
 		apdu.datalen = 2;
 		apdu.lc = 2;
@@ -191,30 +194,6 @@ static int starsign_select_file(sc_card_t *card, const sc_path_t *in_path, sc_fi
 		r = sc_transmit_apdu(card, &apdu);
 		if (r < 0) return r;
 		r = sc_check_sw(card, apdu.sw1, apdu.sw2);
-		
-		if (r == SC_ERROR_FILE_NOT_FOUND) {
-			sc_log(card->ctx, "STARSIGN SELECT FILE: P1=0x00 failed, retrying with P1=0x01 (Select DF) for FID %04X", fid);
-			sc_format_apdu(card, &apdu, SC_APDU_CASE_3_SHORT, 0xA4, 0x01, 0x0C);
-			apdu.data = &in_path->value[i];
-			apdu.datalen = 2;
-			apdu.lc = 2;
-
-			r = sc_transmit_apdu(card, &apdu);
-			if (r < 0) return r;
-			r = sc_check_sw(card, apdu.sw1, apdu.sw2);
-		}
-
-		if (r == SC_ERROR_FILE_NOT_FOUND) {
-			sc_log(card->ctx, "STARSIGN SELECT FILE: P1=0x01 failed, retrying with P1=0x02 (Select EF) for FID %04X", fid);
-			sc_format_apdu(card, &apdu, SC_APDU_CASE_3_SHORT, 0xA4, 0x02, 0x0C);
-			apdu.data = &in_path->value[i];
-			apdu.datalen = 2;
-			apdu.lc = 2;
-
-			r = sc_transmit_apdu(card, &apdu);
-			if (r < 0) return r;
-			r = sc_check_sw(card, apdu.sw1, apdu.sw2);
-		}
 
 		if (r < 0) return r;
 	}
@@ -225,8 +204,9 @@ static int starsign_select_file(sc_card_t *card, const sc_path_t *in_path, sc_fi
 			return SC_ERROR_OUT_OF_MEMORY;
 		file->id = (in_path->value[in_path->len - 2] << 8) | in_path->value[in_path->len - 1];
 		file->type = SC_FILE_TYPE_WORKING_EF;
+		file->path = *in_path;
 		file->ef_structure = SC_FILE_EF_TRANSPARENT;
-		file->size = 0x8000; /* Dummy size so OpenSC reads until EOF */
+		file->size = 0x8000; /* Dummy size so OpenSC reads until EOF (PKCS#15 bounds check requires >0) */
 		file->magic = SC_FILE_MAGIC;
 		*file_out = file;
 	}
