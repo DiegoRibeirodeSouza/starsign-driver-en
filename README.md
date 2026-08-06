@@ -2,80 +2,80 @@
 
 ![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)
 ![License](https://img.shields.io/badge/license-LGPLv2.1-green.svg)
-![Status](https://img.shields.io/badge/status-funcional%20|%20aguardando%20revis%C3%A3o%20upstream-orange.svg)
+![Status](https://img.shields.io/badge/status-functional%20|%20awaiting%20upstream%20review-orange.svg)
 
-Este repositório contém a pesquisa, a engenharia reversa e a implementação final de um driver nativo em C para o **OpenSC**, permitindo o uso do token criptográfico **G&D StarSign CUT S (A3)** em sistemas Linux modernos **sem a necessidade do middleware proprietário SafeSign**.
+This repository contains the research, reverse engineering, and final implementation of a native C driver for **OpenSC**, enabling the use of the **G&D StarSign CUT S (A3)** cryptographic token on modern Linux systems **without the need for the proprietary SafeSign middleware**.
 
-## A Motivação
+## Motivation
 
-O projeto nasceu de uma dor real: a dificuldade extrema de manter o middleware proprietário da A.E.T. Europe (SafeSign) rodando em distribuições Linux modernas (como Debian 13 e Ubuntu 24.04/26.04). 
-A instalação da biblioteca proprietária (`libaetpkss.so`) exigia uma verdadeira engenharia de pacotes, com dependências quebradas de versões antigas do `libssl` e `libwxbase`. Além do pesadelo de dependências, identificamos que verificações contínuas de status (polling) causavam o **desligamento sumário** do token devido a bugs de comunicação no middleware proprietário.
+This project was born out of real pain: the extreme difficulty of keeping the proprietary middleware from A.E.T. Europe (SafeSign) running on modern Linux distributions (such as Debian 13 and Ubuntu 24.04/26.04).
+Installing the proprietary library (`libaetpkss.so`) required a real packaging engineering effort, dealing with broken dependencies of old versions of `libssl` and `libwxbase`. Beyond the dependency nightmare, we identified that continuous status checks (polling) caused the token to **abruptly shut down** due to communication bugs within the proprietary middleware.
 
-A solução definitiva? **Eliminar o SafeSign e criar um driver de código aberto nativo para o OpenSC.**
+The definitive solution? **Eliminate SafeSign and create a native, open-source driver for OpenSC.**
 
-## Engenharia Reversa e Descobertas Técnicas
+## Reverse Engineering and Technical Discoveries
 
-O projeto OpenSC já suporta dezenas de smartcards nativamente, mas o G&D StarSign CUT S possuía travas de proteção e peculiaridades no protocolo ISO-7816 que impediam a sua leitura nativa. Iniciamos a engenharia reversa interceptando as chamadas USB e PC/SC (via `pcscd`), desvendando múltiplas barreiras. 
+The OpenSC project already supports dozens of smartcards natively, but the G&D StarSign CUT S had protection mechanisms and peculiarities in its ISO-7816 protocol implementation that prevented native reading. We began reverse engineering by intercepting USB and PC/SC calls (via `pcscd`), uncovering multiple barriers.
 
-A análise técnica do código (`card-starsign.c`) revela as seguintes inovações essenciais aplicadas ao OpenSC:
+The technical analysis of the code (`card-starsign.c`) reveals the following essential innovations applied to OpenSC:
 
-### 1. Atestação de Inicialização (Handshake de Compatibilidade)
-O token recusava comandos complexos a menos que fosse inicializado com uma atestação textual de que o software em execução é oficial:
+### 1. Initialization Attestation (Compatibility Handshake)
+The token refused complex commands unless it was initialized with a textual attestation that the running software was official:
 `I am A.E.T. Europe B.V. SafeSign or BlueX approved software.`
-Nosso driver implementa a injeção exata dessa string em texto puro via comando `PUT DATA` (APDU: `DA 01 00`) logo após o reset do cartão, destravando o acesso ao applet.
+Our driver implements the exact injection of this plain text string via a `PUT DATA` command (APDU: `DA 01 00`) right after the card reset, unlocking access to the applet.
 
-### 2. Gestão de Canais Lógicos (Logical Channels)
-O applet PKCS#15 recusa operações no canal de comunicação padrão (Canal 0). O driver envia um comando `MANAGE CHANNEL` (`70 00 00`) para abrir um novo canal lógico (Canal 1), forçando todas as APDUs subsequentes no driver a usarem a classe `CLA = 0x01`.
+### 2. Logical Channels Management
+The PKCS#15 applet refuses operations on the default communication channel (Channel 0). The driver sends a `MANAGE CHANNEL` command (`70 00 00`) to open a new logical channel (Channel 1), forcing all subsequent APDUs in the driver to use the class `CLA = 0x01`.
 
-### 3. Bypass de Seleção e a Peculiaridade do Sistema de Arquivos
-O StarSign CUT S **rejeita silenciosamente** a instrução `SELECT FILE` se a solicitação de controle FCI for feita no padrão tradicional (`P2=00`). 
-Nossa engenharia reversa descobriu empiricamente que ele só aceita `P2=0x0C` (Sem resposta FCI esperada). Sem o FCI, o OpenSC nativo enxergava todos os arquivos com `tamanho = 0`. Para resolver, sobrescrevemos a função `starsign_select_file`:
-- Forçamos `P2=0x0C`.
-- Injetamos um tamanho fictício grande (`0x8000`) na estrutura do OpenSC. O núcleo do OpenSC (`sc_read_binary`) é inteligente o suficiente para parar a leitura quando atinge o fim do arquivo real.
-- Implementamos uma correção automática para caminhos que tentavam retornar à MF (`3F00`), re-selecionando o applet correto (`5015`) para evitar falhas em referências relativas do token.
+### 3. Selection Bypass and File System Peculiarity
+The StarSign CUT S **silently rejects** the `SELECT FILE` instruction if the FCI control request is made in the traditional standard (`P2=00`).
+Our empirical reverse engineering discovered that it only accepts `P2=0x0C` (No FCI response expected). Without the FCI, the native OpenSC saw all files with `size = 0`. To resolve this, we overrode the `starsign_select_file` function:
+- We force `P2=0x0C`.
+- We inject a large dummy size (`0x8000`) into the OpenSC structure. The OpenSC core (`sc_read_binary`) is smart enough to stop reading when it reaches the end of the actual file.
+- We implemented an automatic fix for paths attempting to return to the MF (`3F00`), re-selecting the correct applet (`5015`) to avoid failures in relative token references.
 
-### 4. Customização de Ambientes de Segurança (MSE) e PIN
-O driver original do ISO7816 não montava a APDU do `Manage Security Environment` (MSE) como o chip exigia. Criamos um override em `starsign_set_security_env` para injetar os bytes específicos `84 01 01 80 01 02` para operações de assinatura (`SC_SEC_OPERATION_SIGN`).
-Da mesma forma, sobrescrevemos o envio de PIN (`starsign_pin_cmd`) para forçar o parâmetro `P2=0x02` e aplicar um padding fixo de 15 bytes no buffer.
+### 4. Customization of Security Environments (MSE) and PIN
+The original ISO7816 driver did not assemble the `Manage Security Environment` (MSE) APDU exactly as the chip required. We created an override in `starsign_set_security_env` to inject the specific bytes `84 01 01 80 01 02` for signing operations (`SC_SEC_OPERATION_SIGN`).
+Similarly, we overrode the PIN transmission (`starsign_pin_cmd`) to force the `P2=0x02` parameter and apply a fixed 15-byte padding to the buffer.
 
-## O Desafio Final: `NONEwithRSA` e o PJe Office
+## The Final Challenge: `NONEwithRSA` and PJe Office
 
-Após o sucesso inicial da leitura do token, nos deparamos com a rejeição da assinatura pelo sistema judiciário brasileiro (**PJe Office**).
+After the initial success of reading the token, we faced the rejection of the signature by the Brazilian judicial system (**PJe Office**).
 
-### A Restrição do Algoritmo RAW
-Para assinar documentos compatíveis com o ICP-Brasil, o sistema exige uma assinatura "bruta", sem formatação prévia de padding via PKCS#11, conhecida como `NONEwithRSA` / `CKM_RSA_X_509`. Os testes mostraram que o G&D StarSign devolvia o erro `67 00` se recebesse hashes já formatados no `C_Sign`.
-No código C do nosso driver, ativamos a flag **`SC_ALGORITHM_RSA_RAW`** para os tamanhos de chave (1024, 2048, 4096). Isso capacitou o token a receber hashes crus (RAW RSA) e permitiu ao OpenSC cuidar do padding PKCS#1 de forma compatível.
+### The RAW Algorithm Restriction
+To sign documents compatible with ICP-Brasil, the system requires a "raw" signature, without prior padding formatting via PKCS#11, known as `NONEwithRSA` / `CKM_RSA_X_509`. Tests showed that the G&D StarSign returned the error `67 00` if it received hashes already formatted in `C_Sign`.
+In the C code of our driver, we activated the **`SC_ALGORITHM_RSA_RAW`** flag for the key sizes (1024, 2048, 4096). This enabled the token to receive raw hashes (RAW RSA) and allowed OpenSC to handle PKCS#1 padding in a compatible manner.
 
-### O Gargalo do Java 8 e BouncyCastle
-Ainda assim, o **PJe Office oficial** travava:
+### The Java 8 and BouncyCastle Bottleneck
+Even so, the **official PJe Office** crashed:
 `InvalidKeyException: Supplied key (...) is not a RSAPrivateKey instance`
 
-Descobrimos que a culpa estava a três camadas de distância do hardware:
-1. O PJe Office é um aplicativo construído para **Java 8**.
-2. O provedor `SunPKCS11` do Java 8 **não suporta `NONEwithRSA`** para smartcards (bug legado).
-3. O Java 8 delega a assinatura para a biblioteca de fallback **BouncyCastle**.
-4. O BouncyCastle tenta extrair a chave privada do cartão para assinar via software. Como o token impõe `CKA_SENSITIVE = TRUE` (chave inextraível), o sistema entra em colapso.
+We discovered that the blame lied three layers away from the hardware:
+1. PJe Office is an application built for **Java 8**.
+2. The `SunPKCS11` provider in Java 8 **does not support `NONEwithRSA`** for smartcards (legacy bug).
+3. Java 8 delegates the signature to the **BouncyCastle** fallback library.
+4. BouncyCastle tries to extract the private key from the card to sign via software. Since the token enforces `CKA_SENSITIVE = TRUE` (unextractable key), the system collapses.
 
-### A Solução: Integração com `pje_headless`
-A barreira final não era o nosso driver, mas o ecossistema legado. Substituímos o cliente oficial pelo [**pje_headless**](https://github.com/MrSchrodingers/pje_headless) (escrito em Go), que remove a dependência do JVM. O `pje_headless` conversa perfeitamente com a nossa compilação nativa do OpenSC (`opensc-pkcs11.so`), eliminando de vez o SafeSign. O uso de tokens no PAM (sudo) também foi restabelecido com absoluto sucesso via módulo PKCS#11.
+### The Solution: Integration with `pje_headless`
+The final barrier wasn't our driver, but the legacy ecosystem. We replaced the official client with [**pje_headless**](https://github.com/MrSchrodingers/pje_headless) (written in Go), which removes the JVM dependency. The `pje_headless` communicates perfectly with our native OpenSC compilation (`opensc-pkcs11.so`), eliminating SafeSign once and for all. The use of tokens in PAM (sudo) was also successfully restored via the PKCS#11 module.
 
-## Instalação Segura
+## Safe Installation
 
 > [!WARNING]
-> Este driver está em processo de submissão ao repositório oficial do OpenSC (upstream). Instalar sobrescrevendo a lib padrão do sistema pode alterar o comportamento de tokens não-StarSign.
+> This driver is currently being submitted to the official OpenSC repository (upstream). Installing it by overwriting the system's default library may alter the behavior of non-StarSign tokens.
 
-**Requisitos Testados:**
+**Tested Requirements:**
 - **OS:** Debian 13 / Ubuntu 24.04
 - **Token:** G&D StarSign CUT S (ICP-Brasil A3)
 
-### Opção 1: Instalação Fácil (Recomendado)
-Acesse a aba **Releases** no GitHub e baixe os pacotes `.deb` pré-compilados.
+### Option 1: Easy Installation (Recommended)
+Go to the **Releases** tab on GitHub and download the pre-compiled `.deb` packages.
 ```bash
 sudo apt install ./opensc*.deb
 ```
 
-### Opção 2: Compilação Manual
-Se preferir compilar, use um prefixo customizado para isolar o driver:
+### Option 2: Manual Compilation
+If you prefer to compile, use a custom prefix to isolate the driver:
 ```bash
 cd OpenSC
 ./bootstrap
@@ -84,20 +84,20 @@ make
 sudo make install
 ```
 
-### Como usar com o PJe (TJMG / etc)
-Devido ao bug do Java 8 com `NONEwithRSA`, **não use o PJeOffice oficial**. Em vez disso, use o excelente cliente em Go, `pje_headless`.
-Basta apontar a variável de ambiente para o nosso driver compilado (se você usou os pacotes `.deb`, a biblioteca estará em `/usr/lib/x86_64-linux-gnu/opensc-pkcs11.so`):
+### How to use with PJe (TJMG / etc)
+Due to the Java 8 bug with `NONEwithRSA`, **do not use the official PJeOffice**. Instead, use the excellent Go client, `pje_headless`.
+Simply point the environment variable to our compiled driver (if you used the `.deb` packages, the library will be at `/usr/lib/x86_64-linux-gnu/opensc-pkcs11.so`):
 
 ```bash
 export PJE_PKCS11_MODULE=/usr/lib/x86_64-linux-gnu/opensc-pkcs11.so
 ./pjeheadless
 ```
 
-## Agradecimentos (Credits)
+## Credits
 
-- **Comunidade OpenSC:** Pelo fantástico framework de base para comunicação ISO-7816 e PKCS#15.
-- **MrSchrodingers / pje_headless:** Pela criação do cliente em Go, que salvou o ICP-Brasil das amarras da JVM legada.
-- **Projeto Debian:** Por fornecer as ferramentas e documentações robustas de debug (como `pcscd`) que viabilizaram a engenharia reversa.
+- **OpenSC Community:** For the fantastic base framework for ISO-7816 and PKCS#15 communication.
+- **MrSchrodingers / pje_headless:** For creating the Go client, which saved ICP-Brasil from the shackles of the legacy JVM.
+- **Debian Project:** For providing the robust debugging tools and documentation (such as `pcscd`) that made the reverse engineering possible.
 
-## Licença
-Este código modifica o OpenSC e herda sua compatibilidade. O projeto e as modificações são distribuídos sob a licença **LGPLv2.1**. (Veja o arquivo `LICENSE` no repositório do OpenSC).
+## License
+This code modifies OpenSC and inherits its compatibility. The project and modifications are distributed under the **LGPLv2.1** license. (See the `LICENSE` file in the OpenSC repository).
