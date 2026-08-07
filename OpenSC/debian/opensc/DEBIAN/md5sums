@@ -52,7 +52,7 @@ a3e1547545a23bd18a78bd8c22650736  usr/share/bash-completion/completions/sc-hsm-t
 da7767ac57aceffc35a1c009fa210b55  usr/share/bash-completion/completions/westcos-tool
 9b48ef39258bbb438a1bca659168b18d  usr/share/doc/opensc/NEWS.gz
 97c34476f1bd68097e91ff273c76dcab  usr/share/doc/opensc/README.md.gz
-f254ae716f2321512413644b0a486b7e  usr/share/doc/opensc/changelog.Debian.gz
+a07d457f39f71b010d6830ed9eee90b4  usr/share/doc/opensc/changelog.Debian.gz
 6eea2b1d4633989325aadeab2d327352  usr/share/doc/opensc/copyright
 5bbeba6d4f30621ae71f3f4faf99ceea  usr/share/doc/opensc/examples/opensc.conf.example
 7d87d228c85bdad377b2d1f4a94b3b24  usr/share/doc/opensc/html/files.html

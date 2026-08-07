@@ -2,7 +2,7 @@
 
 ![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)
 ![License](https://img.shields.io/badge/license-LGPLv2.1-green.svg)
-![Status](https://img.shields.io/badge/status-functional%20|%20awaiting%20upstream%20review-orange.svg)
+![Status](https://img.shields.io/badge/status-functional%20%26%20signature%20verified-brightgreen.svg)
 
 This repository contains the research, reverse engineering, and final implementation of a native C driver for **OpenSC**, enabling the use of the **G&D StarSign CUT S (A3)** cryptographic token on modern Linux systems **without the need for the proprietary SafeSign middleware**.
 
@@ -27,16 +27,19 @@ Our driver implements the exact injection of this plain text string via a `PUT D
 ### 2. Logical Channels Management
 The PKCS#15 applet refuses operations on the default communication channel (Channel 0). The driver sends a `MANAGE CHANNEL` command (`70 00 00`) to open a new logical channel (Channel 1), forcing all subsequent APDUs in the driver to use the class `CLA = 0x01`.
 
-### 3. Selection Bypass and File System Peculiarity
-The StarSign CUT S **silently rejects** the `SELECT FILE` instruction if the FCI control request is made in the traditional standard (`P2=00`).
-Our empirical reverse engineering discovered that it only accepts `P2=0x0C` (No FCI response expected). Without the FCI, the native OpenSC saw all files with `size = 0`. To resolve this, we overrode the `starsign_select_file` function:
-- We force `P2=0x0C`.
-- We inject a large dummy size (`0x8000`) into the OpenSC structure. The OpenSC core (`sc_read_binary`) is smart enough to stop reading when it reaches the end of the actual file.
-- We implemented an automatic fix for paths attempting to return to the MF (`3F00`), re-selecting the correct applet (`5015`) to avoid failures in relative token references.
+### 3. Selection Bypass and Virtual Paths for Certificates/Data Objects
+The StarSign CUT S has two distinct quirks in `SELECT FILE` handling, both reverse-engineered by cross-referencing our driver's APDU trace against a genuine capture of the proprietary SafeSign 4.7 middleware:
 
-### 4. Customization of Security Environments (MSE) and PIN
+- **Multi-level file IDs use `P1=0x00`, not `P1=0x01`.** The card rejects `P1=0x01` ("select child DF") for special directories, so `starsign_select_file` always selects by plain File ID.
+- **Certificate and data-object paths encode a fictitious `0x3FFF` placeholder** (e.g. `3F00 3FFF 4302 05A0`). The card answers `SW 6A82` (file not found) if `3FFF` is ever selected directly — it is not a real file. The component right after it (e.g. `4302`) **is** a real directory one level below the PKCS#15 application DF (`5031`) and must be selected once; re-selecting it a second time while it is already current *also* fails with `6A82`, so the driver caches it (`starsign_drv_data.mid_fid`) and only re-selects when it actually changes. The final component is then addressed directly as a child EF (`P1=0x02`).
+- **The real file size is read from the card's own FCP response** (`starsign_parse_fcp_size`) instead of a hardcoded guess — required so `sc_pkcs15_read_file`'s `offset + count <= file->size` bounds check does not reject legitimately large files such as certificates (up to ~1.8 KB) while still working for the small key/TokenInfo EFs.
+- Once the PKCS#15 application DF (`5031`) has been entered, every other object beneath it (TokenInfo, ODF/AODF/PrKDF/CDF/DODF EFs, …) is addressed as a **direct child EF** instead of re-navigating from the MF each time — this preserves the working-directory context the virtual-path resolution above depends on.
+
+### 4. Customization of Security Environments (MSE)
 The original ISO7816 driver did not assemble the `Manage Security Environment` (MSE) APDU exactly as the chip required. We created an override in `starsign_set_security_env` to inject the specific bytes `84 01 01 80 01 02` for signing operations (`SC_SEC_OPERATION_SIGN`).
-Similarly, we overrode the PIN transmission (`starsign_pin_cmd`) to force the `P2=0x02` parameter and apply a fixed 15-byte padding to the buffer.
+
+### 5. Signature Padding: the card omits `DigestInfo`
+Early versions of this driver advertised `SC_ALGORITHM_RSA_HASH_SHA256` (and MD5/SHA1), telling OpenSC "hand me the bare hash, I will build the full PKCS#1 v1.5 padding *and* the DigestInfo/OID header myself." Decrypting a live signature with the token's own public key showed this was **not true**: the card pads the raw hash correctly (`00 01 FF..FF 00 <hash>`) but never inserts the DigestInfo ASN.1 header a standards-compliant `SHA256-RSA-PKCS` signature requires — so every signature produced that way, while accepted by the card (`SW 90 00`), was cryptographically invalid and would fail verification. The fix was to advertise only `SC_ALGORITHM_RSA_HASH_NONE`, forcing OpenSC's own crypto layer to build the complete DigestInfo + PKCS#1 block in software and hand the card an already-padded blob for a raw RSA operation (`SC_ALGORITHM_RSA_RAW`). Verified end-to-end: PDFs signed through [`litisdoc`](https://github.com/DiegoRibeirodeSouza/litisdoc) (via pyHanko's PKCS#11 raw-mechanism signer) now come back from `pdfsig` (Poppler) as `Signature Validation: Signature is Valid.`
 
 ## The Final Challenge: `NONEwithRSA` and PJe Office
 

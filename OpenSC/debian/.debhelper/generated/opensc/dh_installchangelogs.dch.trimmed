@@ -1,3 +1,15 @@
+opensc (0.26.1-2+open.a3.7) UNRELEASED; urgency=medium
+
+  * Release version a3.7 with StarSign fixes
+
+ -- Diego Ribeiro de Souza <diego@debian.vitalglobalhub.com>  Thu, 06 Aug 2026 18:11:38 -0300
+
+opensc (0.26.1-2+open.a3.7) unstable; urgency=medium
+
+  * Release version a3.7 with StarSign fixes
+
+ -- Diego Ribeiro <diego@debian>  Thu, 06 Aug 2026 21:10:51 +0000
+
 opensc (0.26.1-2+open.a3.6) unstable; urgency=medium
 
   * Handle EOF correctly by catching 6700 length errors in custom read_binary
