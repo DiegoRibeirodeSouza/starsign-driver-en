@@ -43,7 +43,7 @@ beea024c8f4754be1f63ee2bf9506923  ./patch_mse.sh
 e5845a502500d245480ffeec84b117eb  ./patch_mse2.sh
 f04d2bb5a5ebed2f4e6c9ab053094ca0  ./autom4te.cache/requests
 cc38e0bb3e6b296adf6fe4e3634ad2b2  ./autom4te.cache/output.0
-70e363d4a90f036ccb254206479890ef  ./autom4te.cache/traces.0
+d3b07b8d0e694e742e7741d9cd410b68  ./autom4te.cache/traces.0
 cc38e0bb3e6b296adf6fe4e3634ad2b2  ./autom4te.cache/output.1
 315529c74d75fda8192f65b4f8da3642  ./autom4te.cache/traces.2
 315529c74d75fda8192f65b4f8da3642  ./autom4te.cache/traces.1
@@ -52,7 +52,7 @@ e6bb6a07e06b4e3f2a612735c25396d8  ./patch_keys.sh
 cf258f914ddb13bb4cfa8a5d60f951b5  ./config.sub
 0e4ce43b6bb2bb2805ab13e9f3295072  ./depcomp
 4120aef2a6a424acd37a7ad3dce453f0  ./.editorconfig
-00c553af0b20fb4edc16bc02f7b745d1  ./Makefile.in
+7bce6c750ed96cd42f20c5237f4180bd  ./Makefile.in
 5c17d17a456276579f868b374aed5c40  ./win32/bannrbmp.bmp
 256d8c93ab308637a722fa12124a5eab  ./win32/Make.rules.mak
 058b00cfd74f00b3739898786b8ebe1a  ./win32/versioninfo-customactions.rc
@@ -202,7 +202,7 @@ eac722c61aede26c6ba7628636a10278  ./src/libopensc/card-masktech.c
 f0ae0aba7a4cb186f0659878dfa0d157  ./src/libopensc/opensc.exports
 67636451abc8f3fc60fb12fcfb604c46  ./src/libopensc/card-isoApplet.c
 f6b34f41c509137d03dcaa3b8d334431  ./src/libopensc/card-epass2003.c
-d84c0886d8a411f6e925a551e76cc20c  ./src/libopensc/card-starsign.c
+230134a4429a7c9ad830ab8e8187761b  ./src/libopensc/card-starsign.c
 9ca21c758498bcad8eb0869349a74f6d  ./src/libopensc/cwa14890.c
 5b8feb30b31a7057f300027ba6ac2c3a  ./src/libopensc/pkcs15-cac.c
 8a1902eb22b7061f61c9d12e4c33f964  ./src/libopensc/pkcs15-emulator-filter.h
@@ -593,7 +593,7 @@ fe1c9e4c7175c27d0b3bf288473c95aa  ./src/tests/unittests/compression.c
 397b97093d4127a779e2ff65f2e1ed65  ./src/tests/unittests/strip_pkcs1_2_padding.c
 101ab14ab22facca19dceeade7c3d318  ./src/tests/unittests/decode_ecdsa_signature.c
 bd8980f09732b3d1ecf3d2150127708c  ./src/tests/unittests/simpletlv.c
-de61451264659d341596ed1b2394c883  ./src/tests/unittests/Makefile.in
+6d5764e134c7cc8f87d0b5d07fcd4b31  ./src/tests/unittests/Makefile.in
 ec583c5f3920fee1454d3db681c8340d  ./src/tests/unittests/torture.h
 37e43a17e334254dcefbc564b9f62ee5  ./src/tests/unittests/hextobin.c
 1b14e2bfc3f8f246912534c9cbb5b4d1  ./src/tests/unittests/sm.c
@@ -711,7 +711,7 @@ b4e48be493ffb98cdcc00f14f68a26e0  ./m4/ax_check_gnu_make.m4
 4c5508b8d043a95d3bc1536716c18ae4  ./m4/lt~obsolete.m4
 71ff2adc5f257348787b6f06040cdd01  ./install-sh
 da81d591acc8659a402071bb7dcd3615  ./test_mse2.py
-d91e5e38aabe3c49f7230879dda203d1  ./aminclude_static.am
+5f0c7e895147cbb179a033c6b502ae09  ./aminclude_static.am
 9f9fb0a8e9c4f0b324dbaab3663ee8d2  ./test_pkcs11_sign.sh
 8fb3aaeaa10def6ec00fdb5d935cb21c  ./configure.ac
 c3a5fcb3203295bcc77739d9c56d6df2  ./compile

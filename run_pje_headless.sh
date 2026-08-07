@@ -1,7 +1,7 @@
 #!/bin/bash
 export PJE_MODE=full
 export PJE_SIGNER_PRIORITY=pkcs11
-export PJE_PKCS11_MODULE=/home/diego/Documentos/starsign-driver/OpenSC/src/pkcs11/.libs/opensc-pkcs11.so
+export PJE_PKCS11_MODULE=/usr/lib/x86_64-linux-gnu/opensc-pkcs11.so
 
 echo "=== INICIANDO PJe Headless ==="
 # export OPENSC_DEBUG=9

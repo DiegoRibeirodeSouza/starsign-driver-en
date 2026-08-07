@@ -342,10 +342,16 @@ static int starsign_set_security_env(sc_card_t *card, const sc_security_env_t *e
 		return SC_ERROR_INVALID_ARGUMENTS;
 	}
 
-	/* Force max_send_size to prevent apdu.c from falling back to Short APDU chaining 
-	   if the PC/SC reader negotiation mistakenly lowered it. */
+	/* Force max_send_size to prevent apdu.c from falling back to Short APDU chaining
+	   if the PC/SC reader negotiation mistakenly lowered it. Keep max_recv_size at
+	   256 (the real RSA-2048 output size): iso7816_fixup_transceive_length() only
+	   clamps apdu.le down to max_recv_size, never up, and some PKCS#11 framework
+	   callers (e.g. decipher) request an oversized response buffer (512 bytes) that
+	   the reader's USB/PC-SC transport cannot actually deliver in one extended APDU
+	   (SCardTransmit fails with SCARD_E_INVALID_PARAMETER). Capping max_recv_size at
+	   256 forces such oversized Le requests down to the correct, transmittable size. */
 	card->max_send_size = 2048;
-	card->max_recv_size = 2048;
+	card->max_recv_size = 256;
 	card->caps |= SC_CARD_CAP_APDU_EXT;
 
 	u8 p2 = 0;

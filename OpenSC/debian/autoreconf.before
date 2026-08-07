@@ -193,7 +193,7 @@ eac722c61aede26c6ba7628636a10278  ./src/libopensc/card-masktech.c
 f0ae0aba7a4cb186f0659878dfa0d157  ./src/libopensc/opensc.exports
 67636451abc8f3fc60fb12fcfb604c46  ./src/libopensc/card-isoApplet.c
 f6b34f41c509137d03dcaa3b8d334431  ./src/libopensc/card-epass2003.c
-d84c0886d8a411f6e925a551e76cc20c  ./src/libopensc/card-starsign.c
+230134a4429a7c9ad830ab8e8187761b  ./src/libopensc/card-starsign.c
 9ca21c758498bcad8eb0869349a74f6d  ./src/libopensc/cwa14890.c
 5b8feb30b31a7057f300027ba6ac2c3a  ./src/libopensc/pkcs15-cac.c
 8a1902eb22b7061f61c9d12e4c33f964  ./src/libopensc/pkcs15-emulator-filter.h
