@@ -41,6 +41,26 @@ The original ISO7816 driver did not assemble the `Manage Security Environment` (
 ### 5. Signature Padding: the card omits `DigestInfo`
 Early versions of this driver advertised `SC_ALGORITHM_RSA_HASH_SHA256` (and MD5/SHA1), telling OpenSC "hand me the bare hash, I will build the full PKCS#1 v1.5 padding *and* the DigestInfo/OID header myself." Decrypting a live signature with the token's own public key showed this was **not true**: the card pads the raw hash correctly (`00 01 FF..FF 00 <hash>`) but never inserts the DigestInfo ASN.1 header a standards-compliant `SHA256-RSA-PKCS` signature requires — so every signature produced that way, while accepted by the card (`SW 90 00`), was cryptographically invalid and would fail verification. The fix was to advertise only `SC_ALGORITHM_RSA_HASH_NONE`, forcing OpenSC's own crypto layer to build the complete DigestInfo + PKCS#1 block in software and hand the card an already-padded blob for a raw RSA operation (`SC_ALGORITHM_RSA_RAW`). Verified end-to-end: PDFs signed through [`litisdoc`](https://github.com/DiegoRibeirodeSouza/litisdoc) (via pyHanko's PKCS#11 raw-mechanism signer) now come back from `pdfsig` (Poppler) as `Signature Validation: Signature is Valid.`
 
+### 6. Known limitation: some CCID readers cap raw RSA-2048 at 261 bytes
+
+Fixing #5 above (letting OpenSC build the DigestInfo block in software) means a full 256-byte payload has to reach the card in one raw RSA operation. On at least one StarSign CUT S unit we tested, the token's *built-in* CCID reader intermittently fails that transfer with `SCardTransmit failed: SCARD_E_INVALID_PARAMETER`, and `pcscd` logs the reason plainly:
+
+```
+CmdXfrBlockTPDU_T0() Command too long (265 bytes) for max: 261 bytes
+```
+
+This is not a driver bug. The reader's own USB CCID descriptor (`lsusb -v`) declares a **firmware-fixed** message ceiling:
+
+```
+dwMaxCCIDMsgLen   271        (≈261 usable bytes after the CCID header)
+dwFeatures        ...        "Short APDU level exchange" only —
+                              no "Extended APDU level exchange"
+```
+
+Even the leanest possible extended APDU carrying 256 bytes of data (4-byte header + 1-byte extended marker + 2-byte extended Lc + 256 bytes = 263 bytes) is 2 bytes over that ceiling — and ISO 7816-4 command chaining, the usual workaround for oversized payloads, is rejected by this card outright (`SW 6E 00`). The only real fix — the card hashing and padding *and* correctly inserting DigestInfo on its own, so only a 32-byte hash needs to cross the wire — isn't available: see #5, the card's on-chip padding is missing the DigestInfo header.
+
+**Practical effect:** raw RSA-2048 operations (signing, deciphering) through this specific reader are not 100% reliable; they can fail intermittently right at that byte boundary and typically succeed on retry. This is a hardware ceiling of the CCID controller, not something fixable in `card-starsign.c`. See `relatorio_testes_starsign.md` §6 for the full investigation.
+
 ## The Final Challenge: `NONEwithRSA` and PJe Office
 
 After the initial success of reading the token, we faced the rejection of the signature by the Brazilian judicial system (**PJe Office**).

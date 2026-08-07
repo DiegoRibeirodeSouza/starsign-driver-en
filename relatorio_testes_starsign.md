@@ -70,7 +70,63 @@ Com os algoritmos de hash habilitados (`SC_ALGORITHM_RSA_HASH_SHA256`) e as prop
 
 ---
 
-## Próximos Passos (Plano de Ação)
+## Próximos Passos (Plano de Ação) — *superado, ver seção 5 abaixo*
 
-1. **Forçar Extended APDU no Comando de Assinatura:** Investigar por que o OpenSC está fatiando o payload (255 bytes) ao invés de usar o Extended APDU habilitado pela flag `SC_CARD_CAP_APDU_EXT`. Talvez seja necessário modificar o `iso7816_compute_signature` ou forçar o tamanho máximo de envio da leitora.
-2. **Testar Assinatura Final:** Com o Extended APDU resolvido, a assinatura será devolvida corretamente pelo token.
+1. ~~Forçar Extended APDU no Comando de Assinatura~~
+2. ~~Testar Assinatura Final~~
+
+---
+
+## 5. Correção Retroativa: a "Assinatura Final (Sucesso Absoluto)" da Seção 4 nunca foi válida
+
+**Data:** 07/08/2026
+
+A seção 4 acima declara "Status Final do Driver: Totalmente operacional" com base no fato de que `pkcs11-tool --sign -m SHA256-RSA-PKCS` terminava com código de saída 0 e o cartão respondendo `SW 90 00`. **Essa conclusão estava errada.** O cartão aceitar o comando e devolver sucesso não significa que a assinatura produzida seja criptograficamente válida — e não era.
+
+**O bug real:** com `SC_ALGORITHM_RSA_HASH_SHA256` habilitado (exatamente a configuração que a seção 4 credita pelo "sucesso"), o cartão recebe apenas o hash de 32 bytes e faz o padding PKCS#1 v1.5 internamente — mas **nunca insere o cabeçalho ASN.1 `DigestInfo`** que uma assinatura SHA-256 padrão exige. Decriptando uma assinatura real com a própria chave pública do token, o bloco de padding continha o hash cru sem o prefixo `30 31 30 0D 06 09 60 86 48 01 65 03 04 02 01 05 00 04 20` esperado. Toda assinatura gerada pela configuração da seção 4 seria classificada como **inválida** por qualquer verificador de conformidade real (Adobe, ITI, `pdfsig`), apesar do `SW 90 00`.
+
+**Correção aplicada:** remover `SC_ALGORITHM_RSA_HASH_SHA256`/`MD5`/`SHA1` do `card-starsign.c`, deixando apenas `SC_ALGORITHM_RSA_HASH_NONE`. Isso força o próprio OpenSC a montar o bloco completo `DigestInfo` + padding PKCS#1 em software, e mandar o bloco de 256 bytes já pronto pro cartão fazer só a exponenciação modular crua (`SC_ALGORITHM_RSA_RAW`).
+
+**Verificado de verdade desta vez:** assinatura de PDF via `litisdoc`/pyHanko validada como `Signature is Valid` pelo `pdfsig` (Poppler) — a primeira verificação de conformidade real feita neste projeto.
+
+---
+
+## 6. Limite físico de 261 bytes do leitor CCID embutido no token
+
+**Data:** 07/08/2026
+
+Corrigir a seção 5 acima resolveu a validade da assinatura, mas expôs um problema de transporte que a seção 4 nunca tinha diagnosticado corretamente: a operação RSA-2048 crua (`RAW`) exige transmitir **256 bytes** de dados numa única APDU — e essa transmissão falha de forma intermitente com `SCardTransmit/Control failed: 0x80100016` (`SCARD_E_INVALID_PARAMETER`) ou, no lado do `pcscd`, com:
+
+```
+CmdXfrBlockTPDU_T0() Command too long (265 bytes) for max: 261 bytes
+```
+
+**Causa raiz identificada com certeza:** o leitor CCID embutido no próprio token (`1059:0019 Giesecke & Devrient GmbH StarSign CUT S`) declara, no seu descritor USB (`lsusb -v`), um limite **fixo e imutável de firmware**:
+
+```
+dwMaxCCIDMsgLen       271        ← tamanho máximo de mensagem USB CCID
+dwFeatures                       ← inclui "Short APDU level exchange"
+                                    NÃO inclui "Extended APDU level exchange"
+dwProtocols             2  T=1
+```
+
+271 bytes de mensagem CCID menos ~10 bytes de cabeçalho do próprio protocolo CCID = **261 bytes utilizáveis** — batendo exatamente com o erro do `pcscd`.
+
+**Por que isso é matematicamente insolúvel com os dados existentes:**
+
+Mesmo no formato mais compacto possível de uma APDU estendida (Case 3, sem pedir resposta imediata):
+
+```
+CLA + INS + P1 + P2   4 bytes
+marcador estendido     1 byte
+Lc estendido           2 bytes
+dados                256 bytes
+──────────────────────────────
+total                263 bytes   →  ainda 2 bytes acima do limite de 261
+```
+
+E o caminho alternativo — fragmentar em múltiplas APDUs curtas via *command chaining* ISO 7816-4 — já havia sido testado e **rejeitado pelo cartão** com `SW 6E 00` ("Class not supported"), documentado na seção 4 original.
+
+**Conclusão:** existe uma incompatibilidade física genuína entre o leitor CCID embutido neste token e o requisito de payload de uma operação RSA-2048 crua — não é um bug de configuração, é um limite de hardware declarado no firmware do próprio dispositivo. A única saída teórica seria o cartão fazer o hash+padding+`DigestInfo` internamente (reduzindo o payload transmitido para 32 bytes de hash) — mas o item 5 acima já provou que essa via existe no hardware, porém está incompleta (falta o `DigestInfo`), então não é utilizável como está.
+
+**Status honesto:** a operação de assinatura RAW/estendida funciona de forma **intermitente**, não garantida — provavelmente dependendo de variações sutis de timing/negociação USB perto do limite de 261 bytes. Isso não é resolvível por software dado o hardware atual. Documentado aqui e reportado no PR #3764 do OpenSC para que outros mantenedores/usuários com o mesmo modelo de leitor tenham essa informação.
