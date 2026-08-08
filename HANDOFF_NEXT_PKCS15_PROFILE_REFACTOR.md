@@ -38,6 +38,36 @@ foram corrigidos e enviados** (commit `f0cd700e9` no branch
 Todas as 5 threads de comentário inline do review foram respondidas
 individualmente no PR.
 
+### 1.1. ⚠️ Os pacotes `.deb` publicados estão desatualizados
+
+As mudanças do item 2 e 3 acima (`process_fci`, MSE SET dinâmico) foram
+feitas em `src/libopensc/card-starsign.c` e `src/libopensc/pkcs15-starsign.c`
+— arquivos de **código-fonte compartilhado**, não específicos do Windows.
+Elas foram testadas e validadas hoje **só contra o build Windows/MSVC**.
+
+Os pacotes `.deb` que já estão publicados nos releases do GitHub
+(`opensc_0.26.1-2+open.a3.7_amd64.deb` e os demais, tanto no
+`starsign-driver-en` quanto no `starsign-driver`) foram gerados **antes**
+dessas mudanças — ou seja, **não incluem** as correções de hoje. Quem
+baixar o `.deb` publicado agora ainda está rodando a versão de código
+anterior ao commit `f0cd700e9`.
+
+**Ação pendente para a sessão no Debian:** depois de puxar o branch
+`feature/starsign-cut-s-driver` atualizado, recompilar os pacotes `.deb`
+(o processo que já existe no repo, ver `install_and_test.sh` / scripts de
+empacotamento) e:
+1. Testar no Linux com o token físico antes de publicar (mesma lógica da
+   seção 3 abaixo: dump `pkcs15-tool -D`, comparar com baseline, testar
+   assinatura isolada).
+2. Subir os `.deb` recompilados nos releases do GitHub, substituindo os
+   atuais (ou criando um novo release), tanto no `starsign-driver-en`
+   quanto no `starsign-driver`.
+
+Isso é independente da reestruturação do profile PKCS#15 descrita na
+seção 2 — pode (e talvez deva) ser feito primeiro, já que é só recompilar
+e republicar algo que já foi validado, enquanto a reestruturação é
+trabalho novo.
+
 ## 2. O que falta: a reestruturação maior (ainda não feita)
 
 ### 2.1. De onde vem esse pedido, exatamente
