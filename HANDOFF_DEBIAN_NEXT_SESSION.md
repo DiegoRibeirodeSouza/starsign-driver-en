@@ -164,6 +164,24 @@ long hex id for `--sign --id ...` or similar, they need updating to `01`.
    more commit (`7a1c51342`). See `install_and_test.sh` / the packaging
    scripts already in this repo for the existing process.
 
+## 4b. Windows `.msi` package: already rebuilt and republished today
+
+Not something to redo on Debian, just noting it's handled: the Windows MSI
+installer (`OpenSC-StarSign-CUT-S-0.27.1_x64.msi`) on both repos' `v0.2.0`
+release was stale (built before today's refactor) and has been rebuilt from
+commit `7a1c51342` and re-uploaded to both `starsign-driver-en` and
+`starsign-driver` releases, replacing the old one.
+
+One unresolved oddity, low priority: the new MSI's `opensc.dll` etc. are
+about 4.5x larger than the previous build's (6.1MB vs 1.3MB), even after a
+fully clean rebuild with identical compiler/linker flags, identical vcpkg
+OpenSSL static lib, identical MSVC toolset version, identical export table
+(387 symbols both). Investigated fairly deeply (dumpbin section/import/CFG
+comparison) without finding the root cause. No evidence it's a functional
+problem -- the larger build is the one that passed every validation test
+today (physical signing, ITI approval, `pje_headless`) -- but flagging it in
+case it turns out to matter later or someone recalls what changed.
+
 ## 5. Outstanding PR checklist item
 
 PR #3764's checklist still has "macOS token is tested" unchecked -- no
