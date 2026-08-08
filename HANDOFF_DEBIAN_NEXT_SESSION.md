@@ -1,5 +1,40 @@
 # Handoff: next session on Debian (written from Windows, 2026-08-08 end of day)
 
+> ## STATUS: COMPLETED (2026-08-08, later the same day, on Debian)
+>
+> Everything in section 4's "NOT yet validated" list was done: the fork's
+> latest commit (`7a1c51342`) was pulled into `starsign-driver-en`/`OpenSC`,
+> rebuilt (`dpkg-buildpackage -us -uc -b`), installed, and retested against
+> physical hardware -- certificate/key listing reflects the new static
+> profile correctly (new labels, new ids `01`-`05`), and a signature built
+> the way real callers actually use this driver (SHA-256 + DigestInfo
+> assembled client-side, signed via plain `CKM_RSA_PKCS`) verified correctly
+> end-to-end. The same sync/rebuild was mirrored into the `starsign-driver`
+> (PT) companion repo. Both repos' `.deb` packages were republished as a new
+> `v0.2.1` release (the stale `v0.2.0` `.msi` was also carried forward to
+> `v0.2.1` in both repos). A summary comment was posted on PR #3764. The
+> `try_emulation_first`/`opensc.conf` question in point 4 turned out not to
+> matter: `SC_CARD_TYPE_STARSIGN` in `sc_pkcs15_is_emulation_only()` already
+> forces the static profile on by default regardless of config, confirmed by
+> the new labels/ids showing up with no `opensc.conf` changes needed.
+>
+> One real, separate finding from that same session, unrelated to this
+> refactor: `sc_pkcs15_decipher()`/raw RSA decrypt of a full 256-byte block
+> through this token's built-in CCID reader is a **pre-existing, unfixable
+> hardware limitation** (confirmed identical on the pre-refactor build too,
+> not a regression) -- the reader self-reports PC/SC short-APDU-only
+> (`SC_READER_SHORT_APDU_MAX_SEND_SIZE = 255`), which makes OpenSC fall back
+> to ISO 7816-4 command chaining for the 257-byte decipher payload, and this
+> specific smartcard chip rejects chaining outright (`SW 6E 00`). No fix
+> exists in `card-starsign.c` or `opensc.conf` for this -- both the chaining
+> and extended-APDU routes are independently blocked (extended framing for
+> 257 bytes is ~266 bytes on the wire, over the reader's own ~261-byte USB
+> CCID ceiling). This breaks `encrypta3`'s and any RSA-decrypt-based tool's
+> ability to unlock via this token; signing is unaffected since it never
+> needs to move more than the ~51-byte DigestInfo. **Do not re-attempt this
+> as a driver fix** -- it was investigated thoroughly and is a hardware
+> dead end, not a missing driver feature.
+
 > You (a fresh Claude instance, no memory of this session) are about to start
 > working on Debian. This document is written so you can orient yourself in
 > under two minutes without re-deriving anything below. Read this whole file
