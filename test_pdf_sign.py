@@ -22,11 +22,16 @@ PKCS11_MODULE = str(REPO_ROOT / "OpenSC" / "src" / "pkcs11" / "opensc-pkcs11.dll
 
 # Ajuste estes dois valores para o seu proprio token (veja com
 # `pkcs11-tool --module opensc-pkcs11.dll -L` e `-O`).
+#
+# A partir do commit 7a1c51342 (refactor do profile PKCS#15 para dados
+# estaticos), o id da chave/certificado de assinatura atual passou a ser o
+# valor curto "01" (antes era uma string longa com o nome do titular em
+# hex, lida do CDF/PrKDF do proprio cartao -- o profile estatico nao le
+# mais esse campo do cartao, entao passou a usar ids pequenos atribuidos
+# pelo driver). Veja HANDOFF_DEBIAN_NEXT_SESSION.md secao 3 para a tabela
+# completa de ids.
 TOKEN_LABEL = "DIEGO RIBEIRO DE SOUZA"
-CERT_ID = bytes.fromhex(
-    "444945474f205249424549524f20444520534f555a4120323032342d3130"
-    "2d30392032303a32323a3235"
-)
+CERT_ID = bytes.fromhex("01")
 
 
 def main():

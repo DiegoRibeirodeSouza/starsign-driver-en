@@ -1,5 +1,20 @@
 # Handoff: refatoração do profile PKCS#15 estático (próxima sessão, Debian)
 
+> ## STATUS: COMPLETED (2026-08-08, later the same day, on Windows)
+>
+> The refactor described in section 2 below was done, validated, committed
+> (`7a1c51342`), pushed to `feature/starsign-cut-s-driver`, and replied to
+> on the PR. It ended up happening on Windows rather than Debian (plans
+> changed within the same day), which turned out fine since the task really
+> was platform-independent as predicted. **Do not redo this.** For what to
+> actually do next on Debian, read `HANDOFF_DEBIAN_NEXT_SESSION.md` instead
+> -- it supersedes this file for next-steps purposes. The content below is
+> kept as-is because the reverse-engineered card data (PIN/key/cert
+> paths and ids, the `pkcs15-esteid2025.c` pattern research, etc.) is still
+> accurate and was the reference material actually used to write the
+> refactor -- useful if you ever need to double check where a specific
+> value came from.
+
 > Escrito ao final de uma sessão de testes no Windows (08/08/2026). A tarefa
 > descrita aqui é para ser feita **no Debian/Linux**, não no Windows — é
 > puramente sobre a estrutura interna do driver (`src/libopensc/`), não tem
