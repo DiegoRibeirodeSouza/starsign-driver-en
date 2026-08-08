@@ -1,13 +1,13 @@
 Package: opensc-pkcs11-dbgsym
 Source: opensc
-Version: 0.26.1-2+open.a3.7
+Version: 0.26.1-2+open.a3.8
 Auto-Built-Package: debug-symbols
 Architecture: amd64
 Maintainer: Debian OpenSC Maintainers <pkg-opensc-maint@lists.alioth.debian.org>
-Installed-Size: 2648
-Depends: opensc-pkcs11 (= 0.26.1-2+open.a3.7)
+Installed-Size: 2652
+Depends: opensc-pkcs11 (= 0.26.1-2+open.a3.8)
 Section: debug
 Priority: optional
 Multi-Arch: same
 Description: debug symbols for opensc-pkcs11
-Build-Ids: 0e08d12f4c8bc58b794d4cc90d192cbe72d5796b 71baf818acee946aca100ebe731e76bc6a53369e b21e9d06a6c3426b36f4bd3873b4f159ddfa38be dc43bfb16b57eda48219123a7aadf47637afeb91
+Build-Ids: 0c59e2fe63e29a2e318c5c5d43bb72fcfd77bc6b 0e08d12f4c8bc58b794d4cc90d192cbe72d5796b 71baf818acee946aca100ebe731e76bc6a53369e dc43bfb16b57eda48219123a7aadf47637afeb91

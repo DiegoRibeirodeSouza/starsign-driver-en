@@ -1,8 +1,11 @@
-opensc (0.26.1-2+open.a3.7) UNRELEASED; urgency=medium
+opensc (0.26.1-2+open.a3.8) UNRELEASED; urgency=medium
 
   * Release version a3.7 with StarSign fixes
+  * Sync latest upstream PR review-feedback fixes (license headers,
+    process_fci-based FCP parsing, static PKCS#15 profile per esteid2025
+    pattern; drops cardholder-name-derived IDs from source).
 
- -- Diego Ribeiro de Souza <diego@debian.vitalglobalhub.com>  Thu, 06 Aug 2026 18:11:38 -0300
+ -- Diego Ribeiro de Souza <souza.diegoribeirode@gmail.com>  Sat, 08 Aug 2026 14:31:05 -0300
 
 opensc (0.26.1-2+open.a3.7) unstable; urgency=medium
 

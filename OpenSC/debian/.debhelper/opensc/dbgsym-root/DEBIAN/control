@@ -1,11 +1,11 @@
 Package: opensc-dbgsym
 Source: opensc
-Version: 0.26.1-2+open.a3.7
+Version: 0.26.1-2+open.a3.8
 Auto-Built-Package: debug-symbols
 Architecture: amd64
 Maintainer: Debian OpenSC Maintainers <pkg-opensc-maint@lists.alioth.debian.org>
 Installed-Size: 1746
-Depends: opensc (= 0.26.1-2+open.a3.7)
+Depends: opensc (= 0.26.1-2+open.a3.8)
 Section: debug
 Priority: optional
 Description: debug symbols for opensc
