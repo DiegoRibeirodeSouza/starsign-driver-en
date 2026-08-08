@@ -264,7 +264,69 @@ Se você decidir **não** fazer essa reestruturação:
   sua branch) mesmo sem o PR ser mergeado — não há urgência técnica, só
   urgência de "fechar o PR direito".
 
-## 5. Links de referência
+## 5. Descoberta extra: por que o PJeOffice oficial não funciona com o driver (mesmo mascarado)
+
+Teste feito ao final da sessão de hoje: substituímos o `aetpkss1.dll` (o
+driver SafeSign proprietário, em `C:\Windows\System32`) pelo nosso
+`opensc-pkcs11.dll`, mantendo o nome de arquivo original, pra ver se o
+PJeOffice Pro oficial (app Java de mesa, não o `pje_headless`) reconheceria
+o token achando que era o driver de sempre.
+
+**Resultado parcial:** o PJeOffice **reconheceu o certificado/token
+normalmente** na bandeja do sistema — diferente da experiência no Linux,
+onde nem esse primeiro passo funcionava (ver relato no `PJE_SEAM_FIX.md`:
+"o aplicativo oficial... simplesmente se recusava a reconhecer o token").
+Ou seja, no Windows, mascarar o nome do arquivo resolve a parte de
+*detecção*.
+
+**Mas falhou na hora de assinar**, com este erro (arquivo `erro.txt`
+salvo pelo usuário, stack trace completo disponível se precisar):
+
+```
+com.github.signer4j.imp.exception.ModuleException: java.security.InvalidKeyException:
+Supplied key (sun.security.pkcs11.P11Key$P11PrivateKey) is not a RSAPrivateKey instance
+    at org.bouncycastle.jcajce.provider.asymmetric.rsa.DigestSignatureSpi.engineInitSign(...)
+    at com.github.signer4j.provider.ANYwithRSASignature.engineInitSign(...)
+```
+
+**Causa provável:** o provedor `SunPKCS11` do Java envolve a chave privada
+do nosso driver num objeto opaco (`P11Key$P11PrivateKey`). O BouncyCastle
+(usado pelo PJeOffice/`signer4j` pra assinar) faz um `instanceof
+RSAPrivateKey` estrito antes de assinar, e rejeita esse objeto porque ele
+não implementa essa interface específica. Isso normalmente só acontece
+quando o provedor PKCS#11 do Java **não consegue ler o atributo
+`CKA_MODULUS` do objeto da chave PRIVADA** (o módulo RSA não é segredo —
+só o expoente privado é — mas o `SunPKCS11` parece precisar ler esse
+atributo diretamente do objeto da chave privada, não só do público, pra
+montar um `RSAPrivateKey` completo).
+
+**Isso muito provavelmente é exatamente o mesmo problema que te fez criar
+o `pje_headless`** (você reconheceu a mensagem na hora). Não é um problema
+de "reconhecimento de fabricante" — é uma incompatibilidade de baixo nível
+entre o `SunPKCS11`/BouncyCastle e como o nosso driver expõe atributos da
+chave privada via PKCS#11. **Independe de sistema operacional** — o mesmo
+provavelmente aconteceria no Linux se o app oficial reconhecesse o token
+lá (o que nem chega a acontecer, por outro motivo).
+
+**Possível investigação futura (não feita, é só uma hipótese):**
+verificar se `src/pkcs11/framework-pkcs15.c` pode ser ajustado pra expor
+`CKA_MODULUS` (e talvez `CKA_PUBLIC_EXPONENT`) como atributos legíveis no
+objeto da chave **privada** do StarSign, não só na pública. Se isso
+resolver, seria uma vitória grande — eliminaria a necessidade do
+`pje_headless` como workaround pra usar o PJeOffice oficial. Não sei se é
+viável (pode ser uma limitação genérica do framework PKCS#11 do OpenSC,
+não algo específico do driver StarSign) — vale investigar com calma, mas é
+uma tarefa totalmente separada da reestruturação do profile (seção 2) e
+não tem prioridade definida ainda.
+
+**Nota de segurança/limpeza:** o teste foi revertido ao final da sessão —
+`aetpkss1.dll` original restaurado (via backup em
+`C:\Users\Diego Ribeiro\safesign_backup\`), `opensc.dll` removido do
+System32, serviço `CertPropSvc` (que precisou ser parado temporariamente
+porque segurava a DLL em uso) reiniciado normalmente. O PJeOffice oficial
+está funcional de novo com o driver proprietário.
+
+## 6. Links de referência
 
 - PR: https://github.com/OpenSC/OpenSC/pull/3764
 - Thread do comentário específico: procurar por "very convoluted" nos
