@@ -172,15 +172,20 @@ release was stale (built before today's refactor) and has been rebuilt from
 commit `7a1c51342` and re-uploaded to both `starsign-driver-en` and
 `starsign-driver` releases, replacing the old one.
 
-One unresolved oddity, low priority: the new MSI's `opensc.dll` etc. are
-about 4.5x larger than the previous build's (6.1MB vs 1.3MB), even after a
-fully clean rebuild with identical compiler/linker flags, identical vcpkg
-OpenSSL static lib, identical MSVC toolset version, identical export table
-(387 symbols both). Investigated fairly deeply (dumpbin section/import/CFG
-comparison) without finding the root cause. No evidence it's a functional
-problem -- the larger build is the one that passed every validation test
-today (physical signing, ITI approval, `pje_headless`) -- but flagging it in
-case it turns out to matter later or someone recalls what changed.
+One oddity noticed along the way, resolved, not a concern: the new MSI's
+`opensc.dll` etc. came out about 4.5x larger than the previous build's
+(6.1MB vs 1.3MB). Dug into it with `dumpbin` (sections, imports, Control
+Flow Guard, export table, linker version) without finding a difference --
+everything about the local MSVC/nmake toolchain looked byte-identical
+between builds, including the toolset folder's own last-modified timestamp.
+Explanation: Diego confirmed Windows applied an update overnight, after he
+shut the machine down following the earlier session and before starting
+this one -- likely touching Windows SDK components or default codegen
+mitigations rather than the MSVC compiler/linker binaries themselves, which
+is why comparing the toolset folder directly didn't catch it. No evidence
+of a functional problem either way -- the larger build is the one that
+passed every validation test today (physical signing, ITI approval,
+`pje_headless`).
 
 ## 5. Outstanding PR checklist item
 
